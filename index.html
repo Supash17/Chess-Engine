@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Engine - Play vs AI</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 30px;
+            max-width: 900px;
+            width: 100%;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        h1 {
+            color: #333;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+        }
+        
+        .content {
+            display: flex;
+            gap: 30px;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        
+        #board {
+            width: 500px;
+            height: 500px;
+            flex: 0 0 500px;
+            background: #ddd;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: grid;
+            grid-template-columns: repeat(8, 62.5px);
+            grid-template-rows: repeat(8, 62.5px);
+            gap: 0;
+            padding: 0;
+        }
+        
+        .square {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 3em;
+            cursor: grab;
+            user-select: none;
+            position: relative;
+            min-width: 62.5px;
+            min-height: 62.5px;
+            width: 62.5px;
+            height: 62.5px;
+            overflow: hidden;
+        }
+        
+        .square.light {
+            background: #f0d9b5;
+        }
+        
+        .square.dark {
+            background: #b58863;
+        }
+        
+        .square.selected {
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+        }
+        
+        .piece {
+            cursor: grab;
+            user-select: none;
+            transition: transform 0.1s;
+            line-height: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .piece:hover {
+            transform: scale(1.1);
+        }
+        
+        .info {
+            flex: 1;
+            min-width: 250px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .status {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .status-label {
+            font-size: 0.9em;
+            color: #999;
+            margin-bottom: 5px;
+        }
+        
+        .status-value {
+            font-size: 1.3em;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .engine-info {
+            background: #f0f7ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border-left: 4px solid #764ba2;
+        }
+        
+        .engine-info h3 {
+            color: #764ba2;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+        }
+        
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 0.95em;
+        }
+        
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        
+        .label {
+            color: #666;
+        }
+        
+        .value {
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        #resetBtn {
+            background: #667eea;
+            color: white;
+        }
+        
+        #resetBtn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102,126,234,0.4);
+        }
+        
+        #resetBtn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .move-list {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+        
+        .move-list h4 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 0.95em;
+        }
+        
+        .move-item {
+            padding: 5px;
+            color: #666;
+            line-height: 1.6;
+        }
+        
+        .error {
+            background: #ffe0e0;
+            color: #d32f2f;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #d32f2f;
+            margin-bottom: 15px;
+            display: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            font-weight: bold;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 20px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            #board {
+                width: 350px;
+                height: 350px;
+            }
+            
+            .content {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>♟ Chess Engine</h1>
+            <p class="subtitle">Play Against AI (You are White)</p>
+        </div>
+        
+        <div class="error" id="error"></div>
+        
+        <div class="content">
+            <div id="board"></div>
+            
+            <div class="info">
+                <div class="loading" id="loading">
+                    <span class="spinner"></span>Engine is thinking...
+                </div>
+                
+                <div class="status">
+                    <div class="status-label">Game Status</div>
+                    <div class="status-value" id="status">Engine initializing...</div>
+                </div>
+                
+                <div class="engine-info">
+                    <h3>Last Engine Move</h3>
+                    <div class="info-row">
+                        <span class="label">Move:</span>
+                        <span class="value" id="lastMove">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Evaluation:</span>
+                        <span class="value" id="evaluation">-</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="label">Nodes Evaluated:</span>
+                        <span class="value" id="nodes">-</span>
+                    </div>
+                </div>
+                
+                <div class="move-list">
+                    <h4>Game Moves</h4>
+                    <div class="move-item" id="moves">-</div>
+                </div>
+                
+                <div class="buttons">
+                    <button id="resetBtn">New Game</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const PIECE_UNICODE = {
+            'p': '♟', 'P': '♙',
+            'n': '♞', 'N': '♘',
+            'b': '♝', 'B': '♗',
+            'r': '♜', 'R': '♖',
+            'q': '♛', 'Q': '♕',
+            'k': '♚', 'K': '♔'
+        };
+
+        let game = new Chess();
+        let gameMovesArray = [];
+        let isEngineThinking = false;
+        let selectedSquare = null;
+
+        function positionToSquare(row, col) {
+            const file = String.fromCharCode(97 + col);
+            const rank = String(8 - row);
+            return file + rank;
+        }
+
+        function renderBoard() {
+            const boardDiv = document.getElementById('board');
+            boardDiv.innerHTML = '';
+
+            for (let row = 0; row < 8; row++) {
+                for (let col = 0; col < 8; col++) {
+                    const square = positionToSquare(row, col);
+                    const isLight = (row + col) % 2 === 0;
+                    const squareDiv = document.createElement('div');
+                    squareDiv.className = `square ${isLight ? 'light' : 'dark'}`;
+                    squareDiv.id = square;
+
+                    const piece = game.get(square);
+                    if (piece) {
+                        const pieceSpan = document.createElement('span');
+                        pieceSpan.className = 'piece';
+                        pieceSpan.textContent = PIECE_UNICODE[piece.color === 'w' ? piece.type.toUpperCase() : piece.type];
+                        squareDiv.appendChild(pieceSpan);
+                    }
+
+                    squareDiv.addEventListener('click', () => {
+                        if (selectedSquare === square) {
+                            selectedSquare = null;
+                            renderBoard();
+                        } else if (selectedSquare) {
+                            makeMove(selectedSquare, square);
+                            selectedSquare = null;
+                        } else if (game.get(square) && game.get(square).color === 'w') {
+                            selectedSquare = square;
+                            squareDiv.classList.add('selected');
+                        }
+                    });
+
+                    boardDiv.appendChild(squareDiv);
+                }
+            }
+        }
+
+        function makeMove(from, to) {
+            if (isEngineThinking) return;
+
+            const move = game.move({
+                from: from,
+                to: to,
+                promotion: 'q'
+            });
+
+            if (!move) {
+                renderBoard();
+                return;
+            }
+
+            gameMovesArray.push(move.san);
+            renderBoard();
+            updateUI();
+
+            if (game.game_over()) {
+                updateStatus();
+                return;
+            }
+
+            setTimeout(() => {
+                getEngineMove();
+            }, 300);
+        }
+
+        async function getEngineMove() {
+            isEngineThinking = true;
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error').style.display = 'none';
+
+            try {
+                let attempts = 0;
+                let response;
+                
+                // Retry loop in case engine is still training
+                while (attempts < 30) {
+                    response = await fetch('/api/move', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            fen: game.fen()
+                        })
+                    });
+
+                    if (response.status === 503) {
+                        // Engine still training, wait and retry
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        attempts++;
+                        continue;
+                    }
+
+                    if (!response.ok) {
+                        throw new Error(`Server error: ${response.status}`);
+                    }
+
+                    break;
+                }
+
+                if (!response.ok) {
+                    throw new Error('Engine training timeout');
+                }
+
+                const data = await response.json();
+                const moveNotation = data.move;
+                const move = game.move(moveNotation, { sloppy: true });
+
+                if (move) {
+                    gameMovesArray.push(move.san);
+                    
+                    document.getElementById('lastMove').textContent = move.san;
+                    document.getElementById('evaluation').textContent = 
+                        (data.evaluation > 0 ? '+' : '') + data.evaluation.toFixed(2);
+                    document.getElementById('nodes').textContent = 
+                        data.nodes.toLocaleString();
+
+                    renderBoard();
+                }
+
+                updateUI();
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error connecting to engine. Please refresh the page.');
+            } finally {
+                isEngineThinking = false;
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        function updateUI() {
+            let movesStr = '';
+            for (let i = 0; i < gameMovesArray.length; i += 2) {
+                const moveNum = (i / 2) + 1;
+                movesStr += `${moveNum}. ${gameMovesArray[i]} `;
+                if (i + 1 < gameMovesArray.length) {
+                    movesStr += `${gameMovesArray[i + 1]} `;
+                }
+            }
+            document.getElementById('moves').textContent = movesStr || '-';
+
+            updateStatus();
+        }
+
+        function updateStatus() {
+            let status = '';
+            
+            if (game.game_over()) {
+                if (game.in_checkmate()) {
+                    status = game.turn() === 'w' ? '♚ Black Won!' : '♔ White Won!';
+                } else if (game.in_draw()) {
+                    status = '🤝 Draw';
+                } else {
+                    status = '🏁 Game Over';
+                }
+            } else if (game.in_check()) {
+                status = '⚠️ ' + (game.turn() === 'w' ? 'White' : 'Black') + ' in Check!';
+            } else {
+                status = (game.turn() === 'w' ? '♔ White' : '♚ Black') + ' to Move';
+            }
+            
+            document.getElementById('status').textContent = status;
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+        }
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            game = new Chess();
+            gameMovesArray = [];
+            selectedSquare = null;
+            document.getElementById('lastMove').textContent = '-';
+            document.getElementById('evaluation').textContent = '-';
+            document.getElementById('nodes').textContent = '-';
+            document.getElementById('moves').textContent = '-';
+            document.getElementById('error').style.display = 'none';
+            renderBoard();
+            updateStatus();
+        });
+
+        renderBoard();
+        updateStatus();
+    </script>
+</body>
+</html>
